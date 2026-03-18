@@ -62,7 +62,6 @@ export interface AnimationFunctionParams {
    * When using New Architecture(Fabric), Correct `componentHeight` should be calculated before UI will be rendered, but sometime it can have few milliseconds delay.
    *
    * If `AnimationFunction` would return styles that somehow changes size of the component (e.g. `scale` property) while `animationState = 0` - height of the component can be calculated incorrectly, so keep it in mind.
-   *
    * Initial value is set to `9999` to prevent 2 issues:
    * 1. avoid glitch in case component height calculated few milliseconds after the initial render;
    * 2. avoid crash when you try to divide something by `componentHeight`. **BE CAREFUL!**, it can contain `0` when your component returns empty view or nullable value. So try to avoid dividing by `componentHeight` or avoid situations when your Notification Component can return something that has `height = 0` */
