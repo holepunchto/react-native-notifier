@@ -6,7 +6,8 @@ import {
   type TextStyle,
   type StyleProp,
 } from 'react-native';
-import type { InternalNotifierComponentProps } from '../types';
+
+import SafeContainer from './SafeContainer';
 
 type AlertTypes = 'error' | 'warn' | 'info' | 'success';
 
@@ -36,17 +37,12 @@ const s = StyleSheet.create({
   },
 });
 
-export interface AlertComponentProps extends InternalNotifierComponentProps {
+export interface AlertComponentProps {
   /** Background color will be changed depending on the type. Available values: `error`(red), `success`(green), `warn`(orange) and `info`(blue).
    * @default 'success' */
-  type: AlertTypes;
+  alertType: AlertTypes;
 
-  /**
-   * @deprecated use `type` instead
-   */
-  alertType?: AlertTypes;
-
-  /** While the background of the alert depends on `type`, you can also set the other color you want.
+  /** While the background of the alert depends on `alertType`, you can also set the other color you want.
    * @default null */
   backgroundColor?: string;
 
@@ -62,8 +58,8 @@ export interface AlertComponentProps extends InternalNotifierComponentProps {
    * @default null */
   maxDescriptionLines?: number;
 
-  /** A container of the component. Set it in case you use different SafeAreaView than the custom `ViewWithOffsets`
-   * @default ViewWithOffsets */
+  /** A container of the component. Set it in case you use different SafeAreaView than the standard
+   * @default SafeAreaView */
   ContainerComponent?: React.ElementType;
 
   /** The style to use for rendering title
@@ -75,27 +71,28 @@ export interface AlertComponentProps extends InternalNotifierComponentProps {
   descriptionStyle?: StyleProp<TextStyle>;
 }
 
-export const AlertComponent = ({
+interface AlertComponentAllProps extends AlertComponentProps {
+  title?: string;
+  description?: string;
+}
+
+const AlertComponent: React.FunctionComponent<AlertComponentAllProps> = ({
   title,
   titleStyle,
   description,
   descriptionStyle,
-  type = 'success',
   alertType = 'success',
   backgroundColor,
   textColor,
   ContainerComponent,
   maxTitleLines,
   maxDescriptionLines,
-  ViewWithOffsets,
-}: AlertComponentProps) => {
-  const Container = ContainerComponent ?? ViewWithOffsets;
+}) => {
+  const Container = ContainerComponent ?? SafeContainer;
   const textStyle = textColor ? { color: textColor } : null;
   return (
     <Container
-      style={{
-        backgroundColor: backgroundColor || bgColors[type ?? alertType],
-      }}
+      style={{ backgroundColor: backgroundColor || bgColors[alertType] }}
     >
       <View style={s.container}>
         {!!title && (
@@ -118,3 +115,5 @@ export const AlertComponent = ({
     </Container>
   );
 };
+
+export default AlertComponent;

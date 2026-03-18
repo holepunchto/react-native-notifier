@@ -1,6 +1,6 @@
 {
   "name": "react-native-notifier",
-  "version": "3.0.0-rc.5",
+  "version": "1.0.1",
   "description": "Fast and simple in-app notifications for React Native",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
@@ -32,12 +32,13 @@
     "!**/.*"
   ],
   "scripts": {
-    "example": "yarn workspace react-native-notifier-example",
+    "example": "npm --prefix example install && npm --prefix example start",
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli lib",
-    "prepare": "bob build",
+    "build": "bob build",
+    "prepare": "npm run build",
     "release": "release-it"
   },
   "keywords": [
@@ -51,14 +52,14 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/seniv/react-native-notifier.git"
+    "url": "git+https://github.com/holepunchto/react-native-notifier.git"
   },
-  "author": "Ivan Seniv <seniv97@gmail.com> (https://github.com/seniv)",
+  "author": "Holepunch Inc.",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/seniv/react-native-notifier/issues"
+    "url": "https://github.com/holepunchto/react-native-notifier/issues"
   },
-  "homepage": "https://github.com/seniv/react-native-notifier#readme",
+  "homepage": "https://github.com/holepunchto/react-native-notifier#readme",
   "publishConfig": {
     "registry": "https://registry.npmjs.org/"
   },
@@ -85,19 +86,12 @@
     "release-it": "^15.0.0",
     "typescript": "^5.2.2"
   },
-  "resolutions": {
-    "@types/react": "^18.2.44"
-  },
   "peerDependencies": {
     "react": "*",
     "react-native": "*",
     "react-native-gesture-handler": "*",
     "react-native-safe-area-context": "*"
   },
-  "workspaces": [
-    "example"
-  ],
-  "packageManager": "yarn@3.6.1",
   "jest": {
     "preset": "react-native",
     "modulePathIgnorePatterns": [
