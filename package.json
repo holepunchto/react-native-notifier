@@ -38,6 +38,7 @@
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli lib",
     "build": "bob build",
+    "prepack": "npm run build",
     "prepare": "npm run build",
     "release": "release-it"
   },
