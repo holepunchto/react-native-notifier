@@ -247,7 +247,6 @@ export class NotifierRoot extends React.PureComponent<
       callback(value);
     });
 
-    // iOS may not fire the callback if no animation is running.
     // Fall back to reading the internal value synchronously.
     if (!callbackFired) {
       const currentValue = (this.translateY as any)._value ?? MAX_TRANSLATE_Y;
