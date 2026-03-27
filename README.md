@@ -367,6 +367,25 @@ If you have any solutions or improvements in how to use notifier with native-nav
 ### PanGestureHandler must be used as a descendant of GestureHandlerRootView
 Check this comment: https://github.com/seniv/react-native-notifier/issues/85#issuecomment-1603741147
 
+## 📦 Publishing
+
+To build and publish the package to npm:
+
+```sh
+npm install
+npm run build
+npm publish
+```
+
+### Notes
+
+- Make sure you are logged in to npm:
+  ```sh
+  npm login
+  ```
+
+- Ensure build output (e.g. `lib/`) is included in the published package
+
 ## License
 
 MIT
