@@ -1,6 +1,6 @@
 {
   "name": "@holepunchto/react-native-notifier",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Fast and simple in-app notifications for React Native",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
