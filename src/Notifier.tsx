@@ -233,6 +233,27 @@ export class NotifierRoot extends React.PureComponent<
     }
   }
 
+  /**
+   * Reliably stops any in-progress animation and resolves with the current
+   * value. On iOS, `stopAnimation`'s callback is not invoked when the value
+   * is not currently animating, so we read `_value` synchronously as a
+   * fallback and invoke the callback ourselves.
+   */
+  private stopTranslateYAnimation(callback: (value: number) => void) {
+    let callbackFired = false;
+
+    this.translateY.stopAnimation((value) => {
+      callbackFired = true;
+      callback(value);
+    });
+
+    // Fall back to reading the internal value synchronously.
+    if (!callbackFired) {
+      const currentValue = (this.translateY as any)._value ?? MAX_TRANSLATE_Y;
+      callback(currentValue);
+    }
+  }
+
   private onHandlerStateChange({
     nativeEvent,
   }: PanGestureHandlerStateChangeEvent) {
@@ -240,7 +261,7 @@ export class NotifierRoot extends React.PureComponent<
       clearTimeout(this.hideTimer);
 
       this.wasHidingWhenGestureStarted = this.isHiding;
-      this.translateY.stopAnimation((currentValue) => {
+      this.stopTranslateYAnimation((currentValue) => {
         this.gestureOffset = currentValue;
       });
       this.isHiding = false;
@@ -256,9 +277,10 @@ export class NotifierRoot extends React.PureComponent<
       this.showParams?.swipePixelsToClose ?? SWIPE_PIXELS_TO_CLOSE
     );
 
-    this.translateY.stopAnimation((currentValue) => {
+    this.stopTranslateYAnimation((currentValue) => {
       if (this.wasHidingWhenGestureStarted) {
         this.wasHidingWhenGestureStarted = false;
+        this.isHiding = false;
 
         Animated.timing(this.translateY, {
           toValue: MAX_TRANSLATE_Y,
