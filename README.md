@@ -155,6 +155,7 @@ reset      | Clear notification queue and immediately display the new notificati
 standby    | Add notification to the end of the queue.
 next       | Put notification in the first place in the queue. Will be shown right after the current notification disappears.
 immediate  | Similar to `next`, but also it will hide currently displayed notification.
+skipDuplicate    | Skip the notification if the same notification is already showing or in the queue.
 
 ## Components
 
