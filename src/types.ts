@@ -71,7 +71,12 @@ export interface ShowParams {
   duration?: number;
 }
 
-export type QueueMode = 'immediate' | 'next' | 'standby' | 'reset';
+export type QueueMode =
+  | 'immediate'
+  | 'next'
+  | 'standby'
+  | 'reset'
+  | 'skipDuplicate';
 
 export interface ShowNotificationParams<
   ComponentType extends ElementType = ElementType,

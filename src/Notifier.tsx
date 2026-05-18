@@ -37,6 +37,26 @@ export const Notifier: NotifierInterface = {
   clearQueue: () => {},
 };
 
+type NotificationParams = Pick<ShowNotificationParams, 'title' | 'description'>;
+
+const isSameNotification = (
+  prevNotif: NotificationParams,
+  notif: NotificationParams
+) => {
+  if (
+    !prevNotif.title &&
+    !prevNotif.description &&
+    !notif.title &&
+    !notif.description
+  ) {
+    return false;
+  }
+  return (
+    prevNotif.title === notif.title &&
+    prevNotif.description === notif.description
+  );
+};
+
 export class NotifierRoot extends React.PureComponent<
   ShowNotificationParams,
   StateInterface
@@ -145,6 +165,17 @@ export class NotifierRoot extends React.PureComponent<
         case 'immediate': {
           this.callStack.unshift(params);
           this.hideNotification();
+          break;
+        }
+        case 'skipDuplicate': {
+          const isShowing = isSameNotification(this.state, params);
+          const isInQueue = this.callStack.some((notif) =>
+            isSameNotification(notif, params)
+          );
+          if (isShowing || isInQueue) {
+            break;
+          }
+          this.callStack.unshift(params);
           break;
         }
         default: {
