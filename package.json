@@ -1,6 +1,6 @@
 {
   "name": "@holepunchto/react-native-notifier",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Fast and simple in-app notifications for React Native",
   "source": "./src/index.tsx",
   "main": "./lib/commonjs/index.js",
@@ -61,9 +61,6 @@
     "url": "https://github.com/holepunchto/react-native-notifier/issues"
   },
   "homepage": "https://github.com/holepunchto/react-native-notifier#readme",
-  "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
-  },
   "devDependencies": {
     "@commitlint/config-conventional": "^17.0.2",
     "@evilmartians/lefthook": "^1.5.0",
