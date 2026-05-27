@@ -1,11 +1,11 @@
 import React from 'react';
 import {
   Animated,
+  View,
   TouchableWithoutFeedback,
   type LayoutChangeEvent,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   PanGestureHandler,
   State,
@@ -396,8 +396,7 @@ export class NotifierRoot extends React.PureComponent<
           ]}
         >
           <TouchableWithoutFeedback onPress={this.onPress}>
-            <SafeAreaView
-              edges={['top']}
+            <View
               onLayout={this.onLayout}
               style={
                 Platform.OS === 'android' && translucentStatusBar
@@ -410,7 +409,7 @@ export class NotifierRoot extends React.PureComponent<
                 description={description}
                 {...componentProps}
               />
-            </SafeAreaView>
+            </View>
           </TouchableWithoutFeedback>
         </Animated.View>
       </PanGestureHandler>

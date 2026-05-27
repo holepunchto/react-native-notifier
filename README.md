@@ -12,8 +12,9 @@ Fast, simple, and customizable in-app notifications for React Native
 ## Requirements
 
 This library uses [react-native-gesture-handler](https://github.com/software-mansion/react-native-gesture-handler), a perfect library for swipes, and other gesture events.
-
 Please check their installation guide to install it properly: https://docs.swmansion.com/react-native-gesture-handler/docs/installation
+
+This library also uses [react-native-screens](https://github.com/software-mansion/react-native-screens) to display toasts at the top most layer.
 
 ## Installation
 ```sh
@@ -80,8 +81,6 @@ Both `NotifierWrapper` and `NotifierRoot` receive the same props.
 Name                  | Type             | Default                       | Description
 ----------------------|------------------|-------------------------------|-------------
 omitGlobalMethodsHookup| Boolean         | false                         | If set to `true`, global `Notifier` methods will not control this component. It's useful in case you have more than one `NotifierWrapper` or `NotifierRoot` rendered. If enabled, the only way to display notifications is using refs.
-useRNScreensOverlay   | Boolean          | false                         | use `FullWindowOverlay` component from `react-native-screens` library. If `true`, Notifier will be rendered above NativeStackNavigation modals and RN Modal on iOS. This Option will work only if `react-native-screens` library is installed. iOS Only.
-rnScreensOverlayViewStyle| ViewStyle     | null                          | Style that will be used for RN View that is inside of FullWindowOverlay. iOS Only.
 
 All parameters of the [`showNotification`](#showNotification) function can be passed as props to `NotifierWrapper` or `NotifierRoot`. In this case, they will be used as default parameters when calling the [`showNotification`](#showNotification) function. This can be useful for setting default [`Component`](#custom-component) parameter.
 
