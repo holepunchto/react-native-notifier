@@ -123,6 +123,9 @@ export interface ShowNotificationParams<
    * @default {}
    */
   containerProps?: Omit<AnimatedViewProps, 'style'>;
+
+  /** Top insets */
+  top?: number;
 }
 
 export interface StateInterface {

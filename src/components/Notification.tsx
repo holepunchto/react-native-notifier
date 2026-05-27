@@ -11,8 +11,6 @@ import {
   type StyleProp,
 } from 'react-native';
 
-import SafeContainer from './SafeContainer';
-
 const s = StyleSheet.create({
   container: {
     shadowColor: '#000000',
@@ -68,10 +66,6 @@ export interface NotificationComponentProps {
    * @default null */
   maxDescriptionLines?: number;
 
-  /** A container of the component. Set it in case you use different SafeAreaView than the standard
-   * @default SafeAreaView */
-  ContainerComponent?: React.ElementType;
-
   /** The style to use for rendering title
    * @default null */
   titleStyle?: StyleProp<TextStyle>;
@@ -105,41 +99,37 @@ const NotificationComponent: React.FunctionComponent<
   descriptionStyle,
   imageSource,
   imageStyle,
-  ContainerComponent,
   maxTitleLines,
   maxDescriptionLines,
   containerStyle,
   testID,
 }) => {
-  const Container = ContainerComponent ?? SafeContainer;
   return (
-    <Container>
-      <View
-        style={[s.container, containerStyle]}
-        accessible
-        accessibilityLabel={testID}
-        testID={testID}
-      >
-        {!!imageSource && (
-          <Image style={[s.image, imageStyle]} source={imageSource} />
+    <View
+      style={[s.container, containerStyle]}
+      accessible
+      accessibilityLabel={testID}
+      testID={testID}
+    >
+      {!!imageSource && (
+        <Image style={[s.image, imageStyle]} source={imageSource} />
+      )}
+      <View style={s.content}>
+        {!!title && (
+          <Text style={[s.title, titleStyle]} numberOfLines={maxTitleLines}>
+            {title}
+          </Text>
         )}
-        <View style={s.content}>
-          {!!title && (
-            <Text style={[s.title, titleStyle]} numberOfLines={maxTitleLines}>
-              {title}
-            </Text>
-          )}
-          {!!description && (
-            <Text
-              style={[s.description, descriptionStyle]}
-              numberOfLines={maxDescriptionLines}
-            >
-              {description}
-            </Text>
-          )}
-        </View>
+        {!!description && (
+          <Text
+            style={[s.description, descriptionStyle]}
+            numberOfLines={maxDescriptionLines}
+          >
+            {description}
+          </Text>
+        )}
       </View>
-    </Container>
+    </View>
   );
 };
 
