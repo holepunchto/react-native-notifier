@@ -56,7 +56,7 @@ jobs:
         timeout-minutes: 5
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm install
+        run: npm ci
 
       - name: Update version
         if: ${{ inputs.bumpVersion != 'none' }}
