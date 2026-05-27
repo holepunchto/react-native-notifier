@@ -1,10 +1,10 @@
 import React from 'react';
 import {
   Animated,
-  View,
   TouchableWithoutFeedback,
   type LayoutChangeEvent,
   Platform,
+  View,
 } from 'react-native';
 import {
   PanGestureHandler,
@@ -398,11 +398,12 @@ export class NotifierRoot extends React.PureComponent<
           <TouchableWithoutFeedback onPress={this.onPress}>
             <View
               onLayout={this.onLayout}
-              style={
+              style={[
+                { marginTop: this.props.top },
                 Platform.OS === 'android' && translucentStatusBar
                   ? styles.translucentStatusBarPadding
-                  : undefined
-              }
+                  : undefined,
+              ]}
             >
               <Component
                 title={title}
