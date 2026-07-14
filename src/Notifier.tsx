@@ -129,7 +129,7 @@ export class NotifierRoot extends React.PureComponent<
         this.showParams?.hideAnimationDuration ??
         this.showParams?.animationDuration ??
         DEFAULT_ANIMATION_DURATION,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start((result) => {
       if (result?.finished) {
         this.onHidden();
@@ -224,7 +224,7 @@ export class NotifierRoot extends React.PureComponent<
         this.showParams?.showAnimationDuration ??
         this.showParams?.animationDuration ??
         DEFAULT_ANIMATION_DURATION,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start(onShown);
   }
 
@@ -318,7 +318,7 @@ export class NotifierRoot extends React.PureComponent<
           easing: this.showParams?.swipeEasing,
           duration:
             this.showParams?.swipeAnimationDuration ?? SWIPE_ANIMATION_DURATION,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }).start(() => {
           this.hideNotification();
         });
@@ -334,7 +334,7 @@ export class NotifierRoot extends React.PureComponent<
         easing: this.showParams?.swipeEasing,
         duration:
           this.showParams?.swipeAnimationDuration ?? SWIPE_ANIMATION_DURATION,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }).start((result) => {
         if (isSwipedOut && result?.finished) {
           this.onHidden();
