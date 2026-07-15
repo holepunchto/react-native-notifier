@@ -1,46 +1,35 @@
-import NotificationComponent from './components/Notification';
-import { Animated, View } from 'react-native';
 import type { ElementType } from 'react';
+import type { WithTimingConfig } from 'react-native-reanimated';
 
-type AnimatedViewProps = React.ComponentProps<
-  Animated.AnimatedComponent<typeof View>
->;
-type ContainerStyleParam =
-  | ((translateYAnimatedValue: Animated.Value) => AnimatedViewProps['style'])
-  | AnimatedViewProps['style'];
+import type NotificationComponent from './components/Notification';
+
+/** Easing accepted by Reanimated's `withTiming`.
+ *
+ * Custom easing functions run on the UI thread, so they must be workletized:
+ * add a `'worklet'` directive to any function passed here. Values from
+ * Reanimated's own `Easing` (re-exported by this package) already are. */
+export type NotifierEasing = NonNullable<WithTimingConfig['easing']>;
 
 export interface ShowParams {
   /** How fast notification will appear/disappear
    * @default 300 */
   animationDuration?: number;
 
-  /** How fast notification will appear.
-   * @default animationDuration || 300 */
-  showAnimationDuration?: number;
-
-  /** How fast notification will disappear.
-   * @default animationDuration || 300 */
-  hideAnimationDuration?: number;
-
-  /** Animation easing. Details: https://reactnative.dev/docs/easing
+  /** Animation easing. Details: https://docs.swmansion.com/react-native-reanimated/docs/utilities/Easing
    * @default null */
-  easing?: Animated.TimingAnimationConfig['easing'];
+  easing?: NotifierEasing;
 
   /** Show Animation easing.
    * @default easing || null */
-  showEasing?: Animated.TimingAnimationConfig['easing'];
+  showEasing?: NotifierEasing;
 
   /** Hide Animation easing.
    * @default easing || null */
-  hideEasing?: Animated.TimingAnimationConfig['easing'];
+  hideEasing?: NotifierEasing;
 
   /** Function called when entering animation is finished
    * @default null */
   onShown?: () => void;
-
-  /** Function called when notification started hiding
-   * @default null */
-  onStartHiding?: () => void;
 
   /** Function called when notification completely hidden
    * @default null */
@@ -49,22 +38,6 @@ export interface ShowParams {
   /** Function called when user press on notification
    * @default null */
   onPress?: () => void;
-
-  /** Should notification hide when user press on it
-   * @default true */
-  hideOnPress?: boolean;
-
-  /** How many pixels user should swipe-up notification to dismiss it
-   * @default 20 */
-  swipePixelsToClose?: number;
-
-  /** Animation easing after user finished swiping
-   * @default null */
-  swipeEasing?: Animated.TimingAnimationConfig['easing'];
-
-  /** How fast should be animation after user finished swiping
-   * @default 200 */
-  swipeAnimationDuration?: number;
 
   /** Time after notification will disappear. Set to `0` to not hide notification automatically
    * @default 3000 */
@@ -108,22 +81,6 @@ export interface ShowNotificationParams<
    * @default 'reset' */
   queueMode?: QueueMode;
 
-  /** Add top padding that equals to `StatusBar.currentHeight` to correctly display notification when status bar is translucent. Android Only.
-   * @platform Android
-   * @default false
-   */
-  translucentStatusBar?: boolean;
-
-  /** Styles Object or A function that will receive `translateY: Animated.Value` as first parameter and should return Styles that will be used in container. Using this parameter it is possible to create your own animations of the notification. BE CAREFUL!! when set `transform` style it will override default animation.
-   * @default null
-   */
-  containerStyle?: ContainerStyleParam;
-
-  /** props of Animated Container
-   * @default {}
-   */
-  containerProps?: Omit<AnimatedViewProps, 'style'>;
-
   /** Top insets */
   top?: number;
 }
@@ -134,9 +91,6 @@ export interface StateInterface {
   swipeEnabled: boolean;
   Component: ElementType;
   componentProps: Record<string, any>;
-  translucentStatusBar?: boolean;
-  containerStyle?: ContainerStyleParam;
-  containerProps?: Omit<AnimatedViewProps, 'style'>;
 }
 
 export interface NotifierInterface {
@@ -145,6 +99,6 @@ export interface NotifierInterface {
   >(
     params: ShowNotificationParams<ComponentType>
   ): void;
-  hideNotification(onHidden?: Animated.EndCallback): void;
+  hideNotification(onHidden?: (finished: boolean) => void): void;
   clearQueue(hideDisplayedNotification?: boolean): void;
 }
