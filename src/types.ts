@@ -15,6 +15,14 @@ export interface ShowParams {
    * @default 300 */
   animationDuration?: number;
 
+  /** How fast notification will appear.
+   * @default animationDuration || 300 */
+  showAnimationDuration?: number;
+
+  /** How fast notification will disappear.
+   * @default animationDuration || 300 */
+  hideAnimationDuration?: number;
+
   /** Animation easing. Details: https://docs.swmansion.com/react-native-reanimated/docs/utilities/Easing
    * @default null */
   easing?: NotifierEasing;
@@ -38,6 +46,10 @@ export interface ShowParams {
   /** Function called when user press on notification
    * @default null */
   onPress?: () => void;
+
+  /** Should notification hide when user press on it
+   * @default true */
+  hideOnPress?: boolean;
 
   /** Time after notification will disappear. Set to `0` to not hide notification automatically
    * @default 3000 */

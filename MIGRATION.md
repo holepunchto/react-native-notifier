@@ -10,7 +10,7 @@ you are upgrading.
 
 ---
 
-## Holepunch v3.0.0 — migrate to Reanimated
+## v3.0.0 — migrate to Reanimated
 
 Animations moved from React Native's `Animated` to
 [Reanimated](https://docs.swmansion.com/react-native-reanimated) v4. Reanimated 4 works
@@ -64,10 +64,8 @@ These had no equivalent worth carrying across and are gone:
 | `containerStyle` (function form) | The custom-animations API. A plain function can no longer produce an animated style; this would now have to be a worklet consumed inside the library's `useAnimatedStyle`. Removed rather than redesigned — reopen if you need it. |
 | `containerProps` | Props of the animated container. |
 | `translucentStatusBar` | Android status-bar padding. |
-| `showAnimationDuration` / `hideAnimationDuration` | Use `animationDuration`. |
 | `swipePixelsToClose` / `swipeAnimationDuration` / `swipeEasing` | Now fixed internal constants. |
 | `onStartHiding` | Use `onHidden`. |
-| `hideOnPress` | Pressing always hides (the previous default). |
 
 Note that `componentProps.containerStyle` — the style of the notification **body**, passed
 to `NotifierComponents.Notification` — is unaffected and still supported.

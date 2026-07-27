@@ -116,12 +116,15 @@ componentProps        | Object           | {}                            | Addit
 queueMode             | String           | 'reset'                       | Determines the order in which notifications are shown. Read more in the [Queue Mode](#queue-mode) section.
 swipeEnabled          | Boolean          | true                          | Can notification be hidden by swiping it out
 animationDuration     | Number           | 300                           | How fast notification will appear/disappear
+showAnimationDuration | Number           | animationDuration \|\| 300    | How fast notification will appear.
+hideAnimationDuration | Number           | animationDuration \|\| 300    | How fast notification will disappear.
 easing                | Easing           | null                          | Animation easing. Details: https://docs.swmansion.com/react-native-reanimated/docs/utilities/Easing
 showEasing            | Easing           | easing \|\| null              | Show Animation easing.
 hideEasing            | Easing           | easing \|\| null              | Hide Animation easing.
 onShown               | () => void       | null                          | Function called when entering animation is finished
 onHidden              | () => void       | null                          | Function called when notification completely hidden
 onPress               | () => void       | null                          | Function called when user press on notification
+hideOnPress           | Boolean          | true                          | Should notification hide when user press on it
 top                   | Number           | null                          | Top inset applied to the notification body.
 
 Easing values are Reanimated easings — import `Easing` from this package, or from

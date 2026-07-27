@@ -131,7 +131,9 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
         hiddenComponentValue.current,
         {
           duration:
-            showParams.current?.animationDuration ?? DEFAULT_ANIMATION_DURATION,
+            showParams.current?.hideAnimationDuration ??
+            showParams.current?.animationDuration ??
+            DEFAULT_ANIMATION_DURATION,
           easing: showParams.current?.hideEasing ?? showParams.current?.easing,
         },
         (finished) => {
@@ -235,7 +237,10 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
       translateY.value = withTiming(
         MAX_TRANSLATE_Y,
         {
-          duration: restParams.animationDuration ?? DEFAULT_ANIMATION_DURATION,
+          duration:
+            restParams.showAnimationDuration ??
+            restParams.animationDuration ??
+            DEFAULT_ANIMATION_DURATION,
           easing: restParams.showEasing ?? restParams.easing,
         },
         () => {
@@ -342,7 +347,9 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
 
   const onPress = useCallback(() => {
     showParams.current?.onPress?.();
-    hideNotification();
+    if (showParams.current?.hideOnPress !== false) {
+      hideNotification();
+    }
   }, [hideNotification]);
 
   const onLayout = useCallback(({ nativeEvent }: LayoutChangeEvent) => {
