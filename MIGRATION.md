@@ -1,8 +1,82 @@
-# Migration Guide (to v3.0.0)
+# Migration Guide
+
+This fork (`@holepunchto/react-native-notifier`) versions independently of upstream
+[`seniv/react-native-notifier`](https://github.com/seniv/react-native-notifier). Two
+different `3.0.0` releases are documented below — read the one that matches the package
+you are upgrading.
+
+- [`@holepunchto/react-native-notifier` v3.0.0 — Reanimated](#holepunch-v300--migrate-to-reanimated) (this fork)
+- [`react-native-notifier` v3.0.0 — safe area](#upstream-v300--safe-area) (upstream)
+
+---
+
+## v3.0.0 — migrate to Reanimated
+
+Animations moved from React Native's `Animated` to
+[Reanimated](https://docs.swmansion.com/react-native-reanimated) v4. Reanimated 4 works
+**only with the New Architecture** and supports **React Native 0.78+**.
+
+### 1. Install the new peer dependencies
+
+```bash
+npm install --save react-native-reanimated react-native-worklets
+```
+
+Add the worklets babel plugin to your app's `babel.config.js`, last in the list:
+
+```js
+module.exports = {
+  presets: ['module:@react-native/babel-preset'],
+  plugins: ['react-native-worklets/plugin'],
+};
+```
+
+### 2. Custom easing functions must be worklets
+
+Easing now runs on the UI thread. Any **custom** easing function you pass to `easing`,
+`showEasing` or `hideEasing` needs a `'worklet'` directive:
+
+```diff
+-export const showEasing = (x: number) => 1 - (1 - x) ** 5
++export const showEasing = (x: number) => {
++  'worklet'
++  return 1 - (1 - x) ** 5
++}
+```
+
+Values taken from `Easing` (e.g. `Easing.ease`) already are — but note `Easing` is now
+re-exported from `react-native-reanimated` rather than `react-native`. If you import it
+from this package, nothing changes.
+
+### 3. `hideNotification` callback signature
+
+```diff
+-Notifier.hideNotification((result: Animated.EndResult) => console.log(result.finished))
++Notifier.hideNotification((finished: boolean) => console.log(finished))
+```
+
+### 4. Removed parameters
+
+These had no equivalent worth carrying across and are gone:
+
+| Removed | Notes |
+|---|---|
+| `containerStyle` (function form) | The custom-animations API. A plain function can no longer produce an animated style; this would now have to be a worklet consumed inside the library's `useAnimatedStyle`. Removed rather than redesigned — reopen if you need it. |
+| `containerProps` | Props of the animated container. |
+| `translucentStatusBar` | Android status-bar padding. |
+| `swipePixelsToClose` / `swipeAnimationDuration` / `swipeEasing` | Now fixed internal constants. |
+| `onStartHiding` | Use `onHidden`. |
+
+Note that `componentProps.containerStyle` — the style of the notification **body**, passed
+to `NotifierComponents.Notification` — is unaffected and still supported.
+
+---
+
+## Upstream v3.0.0 — safe area
 
 > There is a lot of text, but don't worry, [only point **#1**](#1-install-react-native-safe-area-context) is required for everyone, all other points are necessary only if you use some specific parameters.
 
-Below you’ll find the key changes introduced in **v3.0.0** and how to update your existing code.
+Below you’ll find the key changes introduced in upstream **v3.0.0** and how to update your existing code.
 
 For a full list of changes, see the [**Changelog**](https://github.com/seniv/react-native-notifier/blob/main/CHANGELOG.md) in the repository.
 

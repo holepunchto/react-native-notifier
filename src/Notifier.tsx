@@ -1,34 +1,41 @@
-import React from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
-  Animated,
   TouchableWithoutFeedback,
-  type LayoutChangeEvent,
-  Platform,
   View,
+  type LayoutChangeEvent,
 } from 'react-native';
-import {
-  PanGestureHandler,
-  State,
-  type PanGestureHandlerStateChangeEvent,
-} from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import styles from './Notifier.styles';
 import { Notification as NotificationComponent } from './components';
 import {
   DEFAULT_ANIMATION_DURATION,
+  DEFAULT_COMPONENT_HEIGHT,
   DEFAULT_DURATION,
+  DEFAULT_SWIPE_ENABLED,
   MAX_TRANSLATE_Y,
   MIN_TRANSLATE_Y,
   SWIPE_ANIMATION_DURATION,
   SWIPE_PIXELS_TO_CLOSE,
-  DEFAULT_SWIPE_ENABLED,
-  DEFAULT_COMPONENT_HEIGHT,
 } from './constants';
 import type {
-  ShowParams,
-  ShowNotificationParams,
-  StateInterface,
   NotifierInterface,
+  ShowNotificationParams,
+  ShowParams,
+  StateInterface,
 } from './types';
 
 export const Notifier: NotifierInterface = {
@@ -57,363 +64,333 @@ const isSameNotification = (
   );
 };
 
-export class NotifierRoot extends React.PureComponent<
-  ShowNotificationParams,
-  StateInterface
-> {
-  private isShown: boolean;
-  private isHiding: boolean;
-  private hideTimer: any;
-  private showParams: ShowParams | null;
-  private callStack: Array<ShowNotificationParams>;
-  private hiddenComponentValue: number;
-  private readonly translateY: Animated.Value;
-  private readonly translateYInterpolated: Animated.AnimatedInterpolation<number>;
-  private readonly onGestureEvent: (...args: any[]) => void;
-  private gestureOffset: number;
-  private wasHidingWhenGestureStarted: boolean;
+export const NotifierRoot = (props: ShowNotificationParams) => {
+  const [state, setState] = useState<StateInterface>({
+    Component: NotificationComponent,
+    swipeEnabled: DEFAULT_SWIPE_ENABLED,
+    componentProps: {},
+  });
 
-  constructor(props: ShowNotificationParams) {
-    super(props);
+  // The imperative API reads props and state from outside of render.
+  const propsRef = useRef(props);
+  propsRef.current = props;
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
-    this.state = {
-      Component: NotificationComponent,
-      swipeEnabled: DEFAULT_SWIPE_ENABLED,
-      componentProps: {},
-    };
-    this.isShown = false;
-    this.isHiding = false;
-    this.hideTimer = null;
-    this.showParams = null;
-    this.callStack = [];
-    this.hiddenComponentValue = -DEFAULT_COMPONENT_HEIGHT;
+  const isShown = useRef(false);
+  const isHiding = useRef(false);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showParams = useRef<ShowParams | null>(null);
+  const callStack = useRef<Array<ShowNotificationParams>>([]);
+  const hiddenComponentValue = useRef(-DEFAULT_COMPONENT_HEIGHT);
+  const wasHidingWhenGestureStarted = useRef(false);
+  const showNotificationRef = useRef<(params: any) => void>(() => {});
 
-    this.translateY = new Animated.Value(MIN_TRANSLATE_Y);
-    this.translateYInterpolated = this.translateY.interpolate({
-      inputRange: [MIN_TRANSLATE_Y, MAX_TRANSLATE_Y],
-      outputRange: [MIN_TRANSLATE_Y, MAX_TRANSLATE_Y],
-      extrapolate: 'clamp',
-    });
+  const translateY = useSharedValue(MIN_TRANSLATE_Y);
+  const gestureOffset = useSharedValue(0);
 
-    this.gestureOffset = 0;
-    this.wasHidingWhenGestureStarted = false;
-    this.onGestureEvent = ({ nativeEvent }) => {
-      this.translateY.setValue(this.gestureOffset + nativeEvent.translationY);
-    };
-
-    this.onPress = this.onPress.bind(this);
-    this.onHandlerStateChange = this.onHandlerStateChange.bind(this);
-    this.onLayout = this.onLayout.bind(this);
-    this.showNotification = this.showNotification.bind(this);
-    this.hideNotification = this.hideNotification.bind(this);
-    this.clearQueue = this.clearQueue.bind(this);
-
-    Notifier.showNotification = this.showNotification;
-    Notifier.hideNotification = this.hideNotification;
-    Notifier.clearQueue = this.clearQueue;
-  }
-
-  componentWillUnmount() {
-    clearTimeout(this.hideTimer);
-  }
-
-  public hideNotification(callback?: Animated.EndCallback) {
-    if (!this.isShown || this.isHiding) {
-      return;
-    }
-
-    Animated.timing(this.translateY, {
-      toValue: this.hiddenComponentValue,
-      easing: this.showParams?.hideEasing ?? this.showParams?.easing,
-      duration:
-        this.showParams?.hideAnimationDuration ??
-        this.showParams?.animationDuration ??
-        DEFAULT_ANIMATION_DURATION,
-      useNativeDriver: true,
-    }).start((result) => {
-      if (result?.finished) {
-        this.onHidden();
-      }
-      callback?.(result);
-    });
-
-    this.onStartHiding();
-  }
-
-  public showNotification<
-    ComponentType extends React.ElementType = typeof NotificationComponent,
-  >(functionParams: ShowNotificationParams<ComponentType>) {
-    const params = {
-      ...this.props,
-      ...functionParams,
-      componentProps: {
-        ...this.props?.componentProps,
-        ...functionParams?.componentProps,
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      {
+        translateY: Math.min(
+          Math.max(translateY.value, MIN_TRANSLATE_Y),
+          MAX_TRANSLATE_Y
+        ),
       },
-    };
+    ],
+  }));
 
-    if (this.isShown) {
-      switch (params.queueMode) {
-        case 'standby': {
-          this.callStack.push(params);
-          break;
+  const onStartHiding = useCallback(() => {
+    isHiding.current = true;
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+    }
+  }, []);
+
+  const onHidden = useCallback(() => {
+    gestureOffset.value = 0;
+    showParams.current?.onHidden?.();
+    isShown.current = false;
+    isHiding.current = false;
+    showParams.current = null;
+    translateY.value = MIN_TRANSLATE_Y;
+
+    const nextNotification = callStack.current.shift();
+    if (nextNotification) {
+      showNotificationRef.current(nextNotification);
+    }
+  }, [gestureOffset, translateY]);
+
+  const hideNotification = useCallback(
+    (callback?: (finished: boolean) => void) => {
+      if (!isShown.current || isHiding.current) {
+        return;
+      }
+
+      translateY.value = withTiming(
+        hiddenComponentValue.current,
+        {
+          duration:
+            showParams.current?.hideAnimationDuration ??
+            showParams.current?.animationDuration ??
+            DEFAULT_ANIMATION_DURATION,
+          easing: showParams.current?.hideEasing ?? showParams.current?.easing,
+        },
+        (finished) => {
+          'worklet';
+          if (finished) {
+            scheduleOnRN(onHidden);
+          }
+          if (callback) {
+            scheduleOnRN(callback, !!finished);
+          }
         }
-        case 'next': {
-          this.callStack.unshift(params);
-          break;
-        }
-        case 'immediate': {
-          this.callStack.unshift(params);
-          this.hideNotification();
-          break;
-        }
-        case 'skipDuplicate': {
-          const isShowing = isSameNotification(this.state, params);
-          const isInQueue = this.callStack.some((notif) =>
-            isSameNotification(notif, params)
-          );
-          if (isShowing || isInQueue) {
+      );
+
+      onStartHiding();
+    },
+    [translateY, onHidden, onStartHiding]
+  );
+
+  const setHideTimer = useCallback(() => {
+    const { duration = DEFAULT_DURATION } = showParams.current ?? {};
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+    }
+    if (duration && !isNaN(duration)) {
+      hideTimer.current = setTimeout(() => hideNotification(), duration);
+    }
+  }, [hideNotification]);
+
+  const showNotification = useCallback(
+    <ComponentType extends React.ElementType = typeof NotificationComponent>(
+      functionParams: ShowNotificationParams<ComponentType>
+    ) => {
+      const params = {
+        ...propsRef.current,
+        ...functionParams,
+        componentProps: {
+          ...propsRef.current?.componentProps,
+          ...functionParams?.componentProps,
+        },
+      };
+
+      if (isShown.current) {
+        switch (params.queueMode) {
+          case 'standby': {
+            callStack.current.push(params);
             break;
           }
-          this.callStack.unshift(params);
-          break;
+          case 'next': {
+            callStack.current.unshift(params);
+            break;
+          }
+          case 'immediate': {
+            callStack.current.unshift(params);
+            hideNotification();
+            break;
+          }
+          case 'skipDuplicate': {
+            const isShowing = isSameNotification(stateRef.current, params);
+            const isInQueue = callStack.current.some((notif) =>
+              isSameNotification(notif, params)
+            );
+            if (isShowing || isInQueue) {
+              break;
+            }
+            callStack.current.unshift(params);
+            break;
+          }
+          default: {
+            callStack.current = [params];
+            hideNotification();
+            break;
+          }
         }
-        default: {
-          this.callStack = [params];
-          this.hideNotification();
-          break;
-        }
+        return;
       }
-      return;
-    }
 
-    const {
-      title,
-      description,
-      swipeEnabled,
-      Component,
-      componentProps,
-      translucentStatusBar,
-      containerStyle,
-      containerProps,
-      onShown,
-      ...restParams
-    } = params;
+      const {
+        title,
+        description,
+        swipeEnabled,
+        Component,
+        componentProps,
+        onShown,
+        ...restParams
+      } = params;
 
-    this.setState({
-      title,
-      description,
-      Component: Component ?? NotificationComponent,
-      swipeEnabled: swipeEnabled ?? DEFAULT_SWIPE_ENABLED,
-      componentProps: componentProps,
-      translucentStatusBar,
-      containerStyle,
-      containerProps,
-    });
-
-    this.showParams = restParams;
-    this.isShown = true;
-
-    this.setHideTimer();
-
-    this.translateY.setValue(-DEFAULT_COMPONENT_HEIGHT);
-    Animated.timing(this.translateY, {
-      toValue: MAX_TRANSLATE_Y,
-      easing: this.showParams?.showEasing ?? this.showParams?.easing,
-      duration:
-        this.showParams?.showAnimationDuration ??
-        this.showParams?.animationDuration ??
-        DEFAULT_ANIMATION_DURATION,
-      useNativeDriver: true,
-    }).start(onShown);
-  }
-
-  public clearQueue(hideDisplayedNotification?: boolean) {
-    this.callStack = [];
-
-    if (hideDisplayedNotification) {
-      this.hideNotification();
-    }
-  }
-
-  private setHideTimer() {
-    const { duration = DEFAULT_DURATION } = this.showParams ?? {};
-    clearTimeout(this.hideTimer);
-    if (duration && !isNaN(duration)) {
-      this.hideTimer = setTimeout(this.hideNotification, duration);
-    }
-  }
-
-  private onStartHiding() {
-    this.showParams?.onStartHiding?.();
-    this.isHiding = true;
-    clearTimeout(this.hideTimer);
-  }
-
-  private onHidden() {
-    this.gestureOffset = 0;
-    this.showParams?.onHidden?.();
-    this.isShown = false;
-    this.isHiding = false;
-    this.showParams = null;
-    this.translateY.setValue(MIN_TRANSLATE_Y);
-
-    const nextNotification = this.callStack.shift();
-    if (nextNotification) {
-      this.showNotification(nextNotification);
-    }
-  }
-
-  /**
-   * Reliably stops any in-progress animation and resolves with the current
-   * value. On iOS, `stopAnimation`'s callback is not invoked when the value
-   * is not currently animating, so we read `_value` synchronously as a
-   * fallback and invoke the callback ourselves.
-   */
-  private stopTranslateYAnimation(callback: (value: number) => void) {
-    let callbackFired = false;
-
-    this.translateY.stopAnimation((value) => {
-      callbackFired = true;
-      callback(value);
-    });
-
-    // Fall back to reading the internal value synchronously.
-    if (!callbackFired) {
-      const currentValue = (this.translateY as any)._value ?? MAX_TRANSLATE_Y;
-      callback(currentValue);
-    }
-  }
-
-  private onHandlerStateChange({
-    nativeEvent,
-  }: PanGestureHandlerStateChangeEvent) {
-    if (nativeEvent.state === State.ACTIVE) {
-      clearTimeout(this.hideTimer);
-
-      this.wasHidingWhenGestureStarted = this.isHiding;
-      this.stopTranslateYAnimation((currentValue) => {
-        this.gestureOffset = currentValue;
+      setState({
+        title,
+        description,
+        Component: Component ?? NotificationComponent,
+        swipeEnabled: swipeEnabled ?? DEFAULT_SWIPE_ENABLED,
+        componentProps,
       });
-      this.isHiding = false;
-      return;
-    }
 
-    if (nativeEvent.oldState !== State.ACTIVE) {
-      return;
-    }
-    this.gestureOffset = 0;
+      showParams.current = restParams;
+      isShown.current = true;
 
-    const swipePixelsToClose = -(
-      this.showParams?.swipePixelsToClose ?? SWIPE_PIXELS_TO_CLOSE
-    );
+      setHideTimer();
 
-    this.stopTranslateYAnimation((currentValue) => {
-      if (this.wasHidingWhenGestureStarted) {
-        this.wasHidingWhenGestureStarted = false;
-        this.isHiding = false;
-
-        Animated.timing(this.translateY, {
-          toValue: MAX_TRANSLATE_Y,
-          easing: this.showParams?.swipeEasing,
+      translateY.value = -DEFAULT_COMPONENT_HEIGHT;
+      translateY.value = withTiming(
+        MAX_TRANSLATE_Y,
+        {
           duration:
-            this.showParams?.swipeAnimationDuration ?? SWIPE_ANIMATION_DURATION,
-          useNativeDriver: true,
-        }).start(() => {
-          this.hideNotification();
-        });
+            restParams.showAnimationDuration ??
+            restParams.animationDuration ??
+            DEFAULT_ANIMATION_DURATION,
+          easing: restParams.showEasing ?? restParams.easing,
+        },
+        () => {
+          'worklet';
+          if (onShown) {
+            scheduleOnRN(onShown);
+          }
+        }
+      );
+    },
+    [hideNotification, setHideTimer, translateY]
+  );
+  showNotificationRef.current = showNotification;
+
+  const clearQueue = useCallback(
+    (hideDisplayedNotification?: boolean) => {
+      callStack.current = [];
+
+      if (hideDisplayedNotification) {
+        hideNotification();
+      }
+    },
+    [hideNotification]
+  );
+
+  const onGestureStart = useCallback(() => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+    }
+    wasHidingWhenGestureStarted.current = isHiding.current;
+    isHiding.current = false;
+  }, []);
+
+  const onGestureEnd = useCallback(
+    (currentValue: number) => {
+      if (wasHidingWhenGestureStarted.current) {
+        wasHidingWhenGestureStarted.current = false;
+        isHiding.current = false;
+
+        translateY.value = withTiming(
+          MAX_TRANSLATE_Y,
+          { duration: SWIPE_ANIMATION_DURATION },
+          () => {
+            'worklet';
+            scheduleOnRN(hideNotification);
+          }
+        );
 
         return;
       }
-      this.setHideTimer();
+      setHideTimer();
 
-      const isSwipedOut = currentValue < swipePixelsToClose;
+      const isSwipedOut = currentValue < -SWIPE_PIXELS_TO_CLOSE;
 
-      Animated.timing(this.translateY, {
-        toValue: isSwipedOut ? this.hiddenComponentValue : MAX_TRANSLATE_Y,
-        easing: this.showParams?.swipeEasing,
-        duration:
-          this.showParams?.swipeAnimationDuration ?? SWIPE_ANIMATION_DURATION,
-        useNativeDriver: true,
-      }).start((result) => {
-        if (isSwipedOut && result?.finished) {
-          this.onHidden();
+      translateY.value = withTiming(
+        isSwipedOut ? hiddenComponentValue.current : MAX_TRANSLATE_Y,
+        { duration: SWIPE_ANIMATION_DURATION },
+        (finished) => {
+          'worklet';
+          if (isSwipedOut && finished) {
+            scheduleOnRN(onHidden);
+          }
         }
-      });
+      );
 
       if (isSwipedOut) {
-        this.onStartHiding();
+        onStartHiding();
       }
-    });
-  }
+    },
+    [translateY, hideNotification, setHideTimer, onHidden, onStartHiding]
+  );
 
-  private onPress() {
-    this.showParams?.onPress?.();
-    if (this.showParams?.hideOnPress !== false) {
-      this.hideNotification();
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(state.swipeEnabled)
+        .onStart(() => {
+          'worklet';
+          // Replaces the old `stopAnimation` + `_value` read: cancelling and
+          // reading is synchronous on the UI thread.
+          cancelAnimation(translateY);
+          gestureOffset.value = translateY.value;
+          scheduleOnRN(onGestureStart);
+        })
+        .onUpdate((event) => {
+          'worklet';
+          translateY.value = gestureOffset.value + event.translationY;
+        })
+        .onEnd(() => {
+          'worklet';
+          cancelAnimation(translateY);
+          const currentValue = translateY.value;
+          gestureOffset.value = 0;
+          scheduleOnRN(onGestureEnd, currentValue);
+        }),
+    [
+      state.swipeEnabled,
+      translateY,
+      gestureOffset,
+      onGestureStart,
+      onGestureEnd,
+    ]
+  );
+
+  const onPress = useCallback(() => {
+    showParams.current?.onPress?.();
+    if (showParams.current?.hideOnPress !== false) {
+      hideNotification();
     }
-  }
+  }, [hideNotification]);
 
-  private onLayout({ nativeEvent }: LayoutChangeEvent) {
+  const onLayout = useCallback(({ nativeEvent }: LayoutChangeEvent) => {
     const heightWithMargin = nativeEvent.layout.height + 50;
-    this.hiddenComponentValue = -Math.max(
+    hiddenComponentValue.current = -Math.max(
       heightWithMargin,
       DEFAULT_COMPONENT_HEIGHT
     );
-  }
+  }, []);
 
-  render() {
-    const {
-      title,
-      description,
-      swipeEnabled,
-      Component,
-      componentProps,
-      translucentStatusBar,
-      containerStyle,
-      containerProps,
-    } = this.state;
+  // Assigned during render, not in an effect: children of NotifierWrapper are
+  // rendered before NotifierRoot but their mount effects run first, and they
+  // may show a notification from one.
+  Notifier.showNotification = showNotification;
+  Notifier.hideNotification = hideNotification;
+  Notifier.clearQueue = clearQueue;
 
-    const additionalContainerStyle =
-      typeof containerStyle === 'function'
-        ? containerStyle(this.translateY)
-        : containerStyle;
+  useEffect(
+    () => () => {
+      if (hideTimer.current) {
+        clearTimeout(hideTimer.current);
+      }
+    },
+    []
+  );
 
-    return (
-      <PanGestureHandler
-        enabled={swipeEnabled}
-        onGestureEvent={this.onGestureEvent}
-        onHandlerStateChange={this.onHandlerStateChange}
-      >
-        <Animated.View
-          {...containerProps}
-          style={[
-            styles.container,
-            {
-              transform: [{ translateY: this.translateYInterpolated }],
-            },
-            additionalContainerStyle,
-          ]}
-        >
-          <TouchableWithoutFeedback onPress={this.onPress}>
-            <View
-              onLayout={this.onLayout}
-              style={[
-                { marginTop: this.props.top },
-                Platform.OS === 'android' && translucentStatusBar
-                  ? styles.translucentStatusBarPadding
-                  : undefined,
-              ]}
-            >
-              <Component
-                title={title}
-                description={description}
-                {...componentProps}
-              />
-            </View>
-          </TouchableWithoutFeedback>
-        </Animated.View>
-      </PanGestureHandler>
-    );
-  }
-}
+  const { title, description, Component, componentProps } = state;
+
+  return (
+    <GestureDetector gesture={panGesture}>
+      <Animated.View style={[styles.container, animatedStyle]}>
+        <TouchableWithoutFeedback onPress={onPress}>
+          <View onLayout={onLayout} style={{ marginTop: props.top }}>
+            <Component
+              title={title}
+              description={description}
+              {...componentProps}
+            />
+          </View>
+        </TouchableWithoutFeedback>
+      </Animated.View>
+    </GestureDetector>
+  );
+};
