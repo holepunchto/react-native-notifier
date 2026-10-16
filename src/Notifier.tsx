@@ -89,6 +89,14 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
   const translateY = useSharedValue(MIN_TRANSLATE_Y);
   const gestureOffset = useSharedValue(0);
 
+  // Reanimated's synchronous UI-prop updates never reach the shadow tree, so
+  // Pressability would measure children at the hidden offset and cancel presses.
+  const [settledTranslateY, setSettledTranslateY] = useState(MIN_TRANSLATE_Y);
+  const onShownSettled = useCallback(
+    () => setSettledTranslateY(MAX_TRANSLATE_Y),
+    []
+  );
+
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       {
@@ -114,6 +122,7 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
     isHiding.current = false;
     showParams.current = null;
     translateY.value = MIN_TRANSLATE_Y;
+    setSettledTranslateY(MIN_TRANSLATE_Y);
 
     const nextNotification = callStack.current.shift();
     if (nextNotification) {
@@ -243,15 +252,18 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
             DEFAULT_ANIMATION_DURATION,
           easing: restParams.showEasing ?? restParams.easing,
         },
-        () => {
+        (finished) => {
           'worklet';
+          if (finished) {
+            scheduleOnRN(onShownSettled);
+          }
           if (onShown) {
             scheduleOnRN(onShown);
           }
         }
       );
     },
-    [hideNotification, setHideTimer, translateY]
+    [hideNotification, setHideTimer, translateY, onShownSettled]
   );
   showNotificationRef.current = showNotification;
 
@@ -300,9 +312,10 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
         { duration: SWIPE_ANIMATION_DURATION },
         (finished) => {
           'worklet';
-          if (isSwipedOut && finished) {
-            scheduleOnRN(onHidden);
+          if (!finished) {
+            return;
           }
+          scheduleOnRN(isSwipedOut ? onHidden : onShownSettled);
         }
       );
 
@@ -310,7 +323,14 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
         onStartHiding();
       }
     },
-    [translateY, hideNotification, setHideTimer, onHidden, onStartHiding]
+    [
+      translateY,
+      hideNotification,
+      setHideTimer,
+      onHidden,
+      onStartHiding,
+      onShownSettled,
+    ]
   );
 
   const panGesture = useMemo(
@@ -380,7 +400,13 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
 
   return (
     <GestureDetector gesture={panGesture}>
-      <Animated.View style={[styles.container, animatedStyle]}>
+      <Animated.View
+        style={[
+          styles.container,
+          animatedStyle,
+          { transform: [{ translateY: settledTranslateY }] },
+        ]}
+      >
         <TouchableWithoutFeedback onPress={onPress}>
           <View onLayout={onLayout} style={{ marginTop: props.top }}>
             <Component
