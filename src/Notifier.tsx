@@ -312,9 +312,10 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
         { duration: SWIPE_ANIMATION_DURATION },
         (finished) => {
           'worklet';
-          if (isSwipedOut && finished) {
-            scheduleOnRN(onHidden);
+          if (!finished) {
+            return;
           }
+          scheduleOnRN(isSwipedOut ? onHidden : onShownSettled);
         }
       );
 
@@ -322,7 +323,14 @@ export const NotifierRoot = (props: ShowNotificationParams) => {
         onStartHiding();
       }
     },
-    [translateY, hideNotification, setHideTimer, onHidden, onStartHiding]
+    [
+      translateY,
+      hideNotification,
+      setHideTimer,
+      onHidden,
+      onStartHiding,
+      onShownSettled,
+    ]
   );
 
   const panGesture = useMemo(
